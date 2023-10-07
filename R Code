@@ -1,0 +1,48 @@
+#load the relevant libraries and datasets
+library(tidyverse)
+satgpa <- read_csv("satgpa.csv")
+attach(satgpa)
+
+#change sex to M/F
+satgpa<-satgpa%>%
+  mutate(sex=if_else(sex==1, "M", "F"))
+head(satgpa)
+
+#diagnostic tests... is additive model appropriate?
+boxplot(fy_gpa~sat_sum + sex, data = satgpa, 
+  main = "Boxplot of Freshman Year GPA (RV), SAT (BV), & Sex (EV)")
+#sex and SAT clearly have an impact on freshman year gpa, and these
+#differences look pretty uniform across blocks
+  
+boxplot(log(fy_gpa)~sat_sum + sex, data = satgpa, 
+        main = "Boxplot of log(Freshman Year GPA) (RV), SAT (BV), & Sex (EV)")
+#Doesn't look better, stay with regular model
+
+boxplot(fy_gpa ~ sex + sat_sum, data = satgpa,
+        main = "Boxplot of Freshman Year GPA (RV), Sex (BV), & SAT (EV)")
+#looks pretty good, no interaction needed
+
+#fit a linear model 
+schoolModel<-lm(fy_gpa~sat_sum+sex, data = satgpa)
+summary(schoolModel)
+
+#finding Grand Average, Block Effects, and Column Effects
+grandAve = mean(fy_gpa)
+grandAve
+
+SATeffect = tapply(fy_gpa, sat_sum, mean) - grandAve
+SATeffect
+SexEffect = tapply(fy_gpa, sex, mean) - grandAve
+SexEffect
+
+#fit an ANOVA model
+gpaModel<-aov(fy_gpa ~ sat_sum+sex)
+summary(gpaModel)
+
+#run diagnostic plots to satisfy conditions for inference
+boxplot(gpaModel$residuals~sat_sum+sex, 
+        main = "Boxplot of Residuals & SAT + Sex")
+qqnorm(gpaModel$residuals,
+       main = "QQ Plot of Model Residuals")
+lattice::densityplot(gpaModel$residuals,
+                     main = "Density Plot of Model Residuals")
